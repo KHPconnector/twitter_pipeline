@@ -15,7 +15,7 @@ class MentalTruth:
 		self.auth = OAuthHandler(config.consumer_key, config.consumer_secret)
 		self.auth.set_access_token(config.access_token, config.access_secret)
 		self.twitter_api = tweepy.API(self.auth)
-		print('Loading the Classifier, please wait...')
+		print('Loading the SVM Classifier, please wait...')
 		self.classifier = joblib.load('src/svm_Classifier.pkl')
 		print('Model ready for use.')
 		self.twitterHandle = twitter_handle
@@ -66,13 +66,11 @@ class MentalTruth:
 		return tweet_stem
 
 	def iterate_twitter(self):
-		for tweet in tweepy.Cursor(self.twitter_api.user_timeline, screen_name=self.twitterHandle).items(100):
+		for tweet in tweepy.Cursor(self.twitter_api.user_timeline, screen_name=self.twitterHandle).items():
 			sentiment = None
 			self.tweet_count += 1
 			tweet_text = json.dumps(tweet._json)
 			tweet_processed = self.stem(self.preprocessTweets(tweet_text))
-			data = json.loads(tweet_processed)
-			print(data['text'])
 
 			if ( ('__positive__') in (tweet_processed)):
 				sentiment  = 1
@@ -85,9 +83,11 @@ class MentalTruth:
 				sentiment = self.classifier.predict(X)
 				print(sentiment[0])
 			self.sentiment_score += sentiment
+			print(self.sentiment_score[0])
+			print(self.tweet_count)
 		self.sentiment_score = self.sentiment_score / self.tweet_count
 		return (self.sentiment_score)
 
-MT = MentalTruth('@@Time4Depression') #pilThelee, #realDonaldTrump
+MT = MentalTruth('@xferreiraxo‏') #pilThelee, Time4Depression, Yunii_que, SaiMoorthy14, iDepressing, SelfHarmer13, montesinomay ‏
 # print('The sentiment score is: ' + str(MT.iterate_twitter())
 print(MT.iterate_twitter()[0])

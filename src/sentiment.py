@@ -97,7 +97,7 @@ def predict(tweet,classifier):
 
 def main():
     print('Loading the Classifier, please wait....')
-    classifier = joblib.load('svmClassifier.pkl')
+    classifier = joblib.load('svm_Classifier.pkl')
     print('READY')
     tweet = ' '
     for tweet in sys.stdin:
