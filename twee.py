@@ -15,9 +15,12 @@ class MentalTruth:
 		self.auth = OAuthHandler(config.consumer_key, config.consumer_secret)
 		self.auth.set_access_token(config.access_token, config.access_secret)
 		self.twitter_api = tweepy.API(self.auth)
-		self.nlp = spacy.load('en')
+		print('Loading the Classifier, please wait...')
+		self.classifier = joblib.load('src/svm_Classifier.pkl')
+		print('Model ready for use.')
 		self.twitterHandle = twitter_handle
-		self.tweet_text = []
+		self.tweet_count = 0
+		self.sentiment_score = 0
 
 	def preprocessTweets(self, tweet):
 		#Convert www.* or https?://* to URL
@@ -52,18 +55,39 @@ class MentalTruth:
 		tweet = tweet.lower()
 		return tweet
 
+	def stem(self, tweet):
+		stemmer = nltk.stem.PorterStemmer()
+		tweet_stem = ''
+		words = [word if(word[0:2]=='__') else word.lower() \
+					for word in tweet.split() \
+					if len(word) >= 3]
+		words = [stemmer.stem(w) for w in words] 
+		tweet_stem = ' '.join(words)
+		return tweet_stem
+
 	def iterate_twitter(self):
-		for tweet in tweepy.Cursor(self.twitter_api.user_timeline, screen_name=self.twitterHandle).items(10):
-			self.preprocessTweets(tweet['text']) #self.preprocessTweets(tweet._json)
-		
+		for tweet in tweepy.Cursor(self.twitter_api.user_timeline, screen_name=self.twitterHandle).items(100):
+			sentiment = None
+			self.tweet_count += 1
+			tweet_text = json.dumps(tweet._json)
+			tweet_processed = self.stem(self.preprocessTweets(tweet_text))
+			data = json.loads(tweet_processed)
+			print(data['text'])
 
-		print("++++++++++++ SpaCy Purpose ++++++++++++")
-		spa_test = self.nlp(u"Sometimes I do not want to be life,The darkness is not over , these recurring days comed and i can't change any thing, yes!  I'm #depressed.")
-		print (spa_test)			
-		
-		print("++++++++++++ Debugging Purpose ++++++++++++")
-		print('# of tweets: ' + str(len(self.tweet_text)))
-		print(self.tweet_text)
+			if ( ('__positive__') in (tweet_processed)):
+				sentiment  = 1
+				print(sentiment)
+			elif ( ('__negative__') in (tweet_processed)):
+				sentiment  = 0
+				print(sentiment)
+			else:
+				X =  [tweet_processed]
+				sentiment = self.classifier.predict(X)
+				print(sentiment[0])
+			self.sentiment_score += sentiment
+		self.sentiment_score = self.sentiment_score / self.tweet_count
+		return (self.sentiment_score)
 
-MT = MentalTruth('@pilthelee') #realDonaldTrump, #
-MT.iterate_twitter()
+MT = MentalTruth('@@Time4Depression') #pilThelee, #realDonaldTrump
+# print('The sentiment score is: ' + str(MT.iterate_twitter())
+print(MT.iterate_twitter()[0])
